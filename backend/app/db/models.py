@@ -32,7 +32,7 @@ class CodeChunk(Base):
     end_line: Mapped[int | None] = mapped_column(Integer)
     language: Mapped[str | None] = mapped_column(Text)
     content: Mapped[str] = mapped_column(Text)
-    embedding = mapped_column(Vector(3072), nullable=True)
+    embedding = mapped_column(Vector(1536), nullable=True)
     metadata_: Mapped[dict | None] = mapped_column("metadata", JSONB)
 
 

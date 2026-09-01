@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     openai_model: str = "gpt-4o"
     openai_embedding_model: str = "text-embedding-3-large"
-    embedding_dim: int = 3072
+    embedding_dim: int = 1536
 
     database_url: str = "postgresql+psycopg://codeqa:codeqa@localhost:5432/codeqa"
     redis_url: str = "redis://localhost:6379/0"
