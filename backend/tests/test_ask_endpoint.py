@@ -71,6 +71,9 @@ def test_ask_streams_answer(db_session, monkeypatch):
     tokens = "".join(e["data"]["text"] for e in events if e["event"] == "token")
     assert tokens == "Auth is in [1]."
 
+    cites = [e for e in events if e["event"] == "citations"]
+    assert cites and isinstance(cites[0]["data"], list)
+
     done = [e for e in events if e["event"] == "done"]
     assert done and done[0]["data"]["session_id"]
 

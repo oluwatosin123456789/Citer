@@ -70,6 +70,7 @@ def _run_agent(
                 mailbox.put(("node", node, update))
                 if node == "synthesize":
                     final = update
+                    mailbox.put(("citations", update.get("citations", [])))
 
         if final:
             save_message(db, session_id, "user", question, None)
@@ -98,6 +99,9 @@ def _sse(mailbox: queue.Queue) -> None:
         elif kind == "token":
             data = json.dumps({"text": payload[0]})
             yield f"event: token\ndata: {data}\n\n"
+        elif kind == "citations":
+            data = json.dumps(payload[0])
+            yield f"event: citations\ndata: {data}\n\n"
         elif kind == "error":
             data = json.dumps({"message": payload[0]})
             yield f"event: error\ndata: {data}\n\n"

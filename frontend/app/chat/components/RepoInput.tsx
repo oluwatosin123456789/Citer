@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { indexRepo } from "@/lib/api";
+import { pollIndex } from "@/lib/api";
 
 export default function RepoInput({
   value,
@@ -11,11 +11,21 @@ export default function RepoInput({
   onChange: (v: string) => void;
 }) {
   const [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
 
   async function handleIndex() {
-    setStatus("indexing...");
-    const res = await indexRepo(value);
-    setStatus(`status: ${res.status}`);
+    setBusy(true);
+    setStatus("starting...");
+    try {
+      await pollIndex(value, (t) => {
+        const msg = t.message ? ` - ${t.message}` : "";
+        setStatus(`${t.status}${msg}`);
+      });
+    } catch {
+      setStatus("failed to index");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -27,8 +37,9 @@ export default function RepoInput({
         onChange={(e) => onChange(e.target.value)}
       />
       <button
-        className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium hover:bg-blue-500"
+        className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium hover:bg-blue-500 disabled:opacity-50"
         onClick={handleIndex}
+        disabled={busy || !value}
       >
         Index
       </button>

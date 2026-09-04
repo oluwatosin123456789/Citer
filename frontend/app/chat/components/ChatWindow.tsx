@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ask, type Citation } from "@/lib/api";
+import { askStream, type Citation } from "@/lib/api";
 import Message, { type ChatMessage } from "./Message";
 
 export default function ChatWindow({
@@ -16,6 +16,9 @@ export default function ChatWindow({
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [steps, setSteps] = useState<string[]>([]);
+  const [liveAnswer, setLiveAnswer] = useState("");
+  const [liveCitations, setLiveCitations] = useState<Citation[]>([]);
 
   async function send() {
     const question = input.trim();
@@ -23,12 +26,30 @@ export default function ChatWindow({
     setInput("");
     setMessages((m) => [...m, { role: "user", content: question }]);
     setLoading(true);
+    setSteps([]);
+    setLiveAnswer("");
+    setLiveCitations([]);
 
+    let answer = "";
+    let citations: Citation[] = [];
     try {
-      const res = await ask(question, sessionId ?? undefined, repoUrl || undefined);
-      onSessionChange(res.session_id);
-      setMessages((m) => [...m, { role: "assistant", content: res.answer, citations: res.citations }]);
+      for await (const ev of askStream(question, sessionId ?? undefined, repoUrl || undefined)) {
+        if (ev.event === "node") {
+          setSteps((s) => [...s, (ev.data as { node: string }).node]);
+        } else if (ev.event === "token") {
+          answer += (ev.data as { text: string }).text;
+          setLiveAnswer(answer);
+        } else if (ev.event === "citations") {
+          citations = ev.data as Citation[];
+          setLiveCitations(citations);
+        } else if (ev.event === "done") {
+          onSessionChange((ev.data as { session_id: string }).session_id);
+        }
+      }
+      setMessages((m) => [...m, { role: "assistant", content: answer, citations }]);
     } finally {
+      setLiveAnswer("");
+      setLiveCitations([]);
       setLoading(false);
     }
   }
@@ -39,7 +60,21 @@ export default function ChatWindow({
         {messages.map((m, i) => (
           <Message key={i} message={m} />
         ))}
-        {loading && <div className="text-sm text-zinc-500">Thinking...</div>}
+        {loading && (
+          <div className="rounded-lg bg-zinc-800 px-4 py-3">
+            {steps.length > 0 && (
+              <div className="mb-1 text-xs text-zinc-400">
+                {steps.map((s) => (
+                  <span key={s} className="mr-2">
+                    <span className="text-blue-400">▸</span> {s}
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="whitespace-pre-wrap text-zinc-100">{liveAnswer}</p>
+            {liveAnswer === "" && <span className="text-sm text-zinc-500">Thinking...</span>}
+          </div>
+        )}
       </div>
       <div className="flex gap-2 border-t border-zinc-800 py-3">
         <input
